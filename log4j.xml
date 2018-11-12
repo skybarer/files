@@ -20,10 +20,6 @@
 		<level value="info" />
 	</logger>
 	
-	<logger name="org.hibernate">
-		<level value="info" />
-	</logger>
-	
 	<logger name="org.springframework.beans">
 		<level value="info" />
 	</logger>

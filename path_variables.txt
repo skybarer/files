@@ -1,0 +1,3 @@
+D:\SOFTWARES\node;D:\SOFTWARES\git\bin;
+
+

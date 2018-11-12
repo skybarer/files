@@ -1,0 +1,3 @@
+download the binary zip distribution.
+
+initdb -U postgres -A password -E utf8 -W -D D:\SOFTWARES\postgres\data

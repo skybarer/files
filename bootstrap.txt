@@ -1,0 +1,60 @@
+https://www.quackit.com/bootstrap
+
+#main concepts
+===============
+grid system
+column nesting
+
+
+#Bootstrap components
+========================
+Navigation
+Drop-down menu
+Navbar
+Breadcrums
+Pagination
+Labels
+Badges
+Jumbotron
+Page_header
+Thumbnails
+Accordian
+Alerts
+progress-bar
+Media-Objects
+List-group
+Panels
+Wells
+
+#Bootstrap plugins
+========================
+Transition plugin
+Modal plugin
+Dropdown plugin
+Scrollspy plugin
+Tab plugin
+Tooltip plugin
+PopOver plugin
+Alert plugin
+Button plugin
+Collapse plugin
+Carousel plugin
+
+
+#break points
+====================
+@include media-breakpoint-up(xs) { ... }
+@include media-breakpoint-up(sm) { ... }
+@include media-breakpoint-up(md) { ... }
+@include media-breakpoint-up(lg) { ... }
+@include media-breakpoint-up(xl) { ... }
+@media only screen and (max-width : 1200px){}
+@media only screen and (max-width : 979px) {}
+@media only screen and (max-width : 767px) {}
+@media only screen and (max-width : 480px) {}
+@media only screen and (max-width : 320px) {}
+
+bootstrap3 vs bootstrap4
+=========================
+https://www.quackit.com/bootstrap/bootstrap_4/differences_between_bootstrap_3_and_bootstrap_4.cfm
+http://wiki.lib.sun.ac.za/images/0/07/Bootstrap-tutorial.pdf
