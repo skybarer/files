@@ -1,3 +1,7 @@
 download the binary zip distribution.
 
 initdb -U postgres -A password -E utf8 -W -D D:\SOFTWARES\postgres\data
+
+"pg_ctl" -D "D:\SOFTWARES\postgres\data" -l logfile start
+
+sudo psql -U postgres -h localhost -p 5432 postgres
