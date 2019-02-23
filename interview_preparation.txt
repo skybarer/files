@@ -1,0 +1,61 @@
+23-02-2019
+
+Technology Stack
+-----------------
+html
+css
+js
+jquery
+angularjs
+angular
+react
+
+core java
+servlets
+spring
+spring boot
+hibernate
+ibatis
+
+tomcat
+jboss
+wildfly
+websphere
+
+jenkins
+git
+logging
+
+sql
+nosql
+
+aws
+
+Need Techlonogy Stack
+----------------------
+Jnuit
+Selenium
+operating system
+shell scripting
+
+
+Other Stuff
+-------------
+Networking
+Mathematics(Logical Questions,probability)
+Resume Building.
+Logical Thinking.
+Algoritham Design.
+Design Principles and Patterns
+Architectural Designs.
+Self Introduction(Tell me about yourself.)
+Time and Space Complexities of Problems.	
+
+
+Techniques to Crack the Interview
+-------------
+I used to practice atleast 6 problems a day for two months before my interviews.
+Not just going through the codes but finding the solution and implementing them on my own, no matter how long it took. That is the most important thing according to me that helped me crack this interview. Second thing was regular coding  to crack the online coding rounds. I used to practice atleast 6 problems a day for two months before my interviews. Third was the getting familiar with all data structures and algorithms.
+CS fundamentals is very important.
+
+
