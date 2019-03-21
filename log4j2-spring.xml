@@ -32,7 +32,7 @@
         </Root>
 
         <!-- LOG "com.baeldung*" at TRACE level -->
-        <Logger name="com.baeldung" level="trace"></Logger>
+        <Logger name="inkollu.akash.logger" level="trace"></Logger>
     </Loggers>
 
 </Configuration>
