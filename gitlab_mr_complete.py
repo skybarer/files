@@ -73,13 +73,13 @@ class GitLabMRDocumentationGenerator:
 
     def authenticate_gmail_auto(self) -> bool:
         """
-        Automatically authenticate with Gmail using provided credentials
-        
+        Automatically authenticate with Gmail using SSO for company email
+
         Returns:
             True if authentication successful, False otherwise
         """
         try:
-            logger.info("Starting automatic Gmail authentication...")
+            logger.info("Starting automatic Gmail SSO authentication...")
             self.driver.get("https://accounts.google.com/signin")
 
             # Wait for page to load
@@ -89,7 +89,8 @@ class GitLabMRDocumentationGenerator:
             try:
                 WebDriverWait(self.driver, 5).until(
                     EC.any_of(
-                        EC.presence_of_element_located((By.XPATH, "//div[@data-gb-custom-button-id='account_switcher']")),
+                        EC.presence_of_element_located(
+                            (By.XPATH, "//div[@data-gb-custom-button-id='account_switcher']")),
                         EC.presence_of_element_located((By.XPATH, "//img[contains(@alt, 'profile')]")),
                         EC.presence_of_element_located((By.XPATH, "//div[@aria-label='Google Account']"))
                     )
@@ -154,6 +155,364 @@ class GitLabMRDocumentationGenerator:
             next_button.click()
             time.sleep(3)
 
+            # Check if redirected to company SSO login page
+            current_url = self.driver.current_url
+            logger.info(f"Current URL after email submission: {current_url}")
+
+            # Handle SSO redirect (common SSO providers)
+            if self._is_sso_redirect():
+                logger.info("Detected SSO redirect. Handling company SSO login...")
+                if not self._handle_sso_login():
+                    logger.error("SSO login failed")
+                    return False
+            else:
+                # Regular Google password flow (fallback)
+                logger.info("No SSO redirect detected, trying regular password flow...")
+                if not self._handle_regular_password_flow():
+                    logger.error("Regular password authentication failed")
+                    return False
+
+            # Handle post-authentication steps
+            return self._handle_post_authentication()
+
+        except Exception as e:
+            logger.error(f"Error during automatic Gmail SSO authentication: {e}")
+            return False
+
+    def _is_sso_redirect(self) -> bool:
+        """
+        Check if we've been redirected to an SSO provider
+
+        Returns:
+            True if SSO redirect detected, False otherwise
+        """
+        current_url = self.driver.current_url.lower()
+
+        # Common SSO provider domains
+        sso_indicators = [
+            'login.microsoftonline.com',  # Microsoft Azure AD
+            'accounts.google.com/signin/oauth',  # Google Workspace SSO
+            'login.okta.com',  # Okta
+            'auth0.com',  # Auth0
+            'onelogin.com',  # OneLogin
+            'ping',  # PingIdentity
+            'saml',  # Generic SAML
+            'sso',  # Generic SSO
+            'adfs',  # Active Directory Federation Services
+            'federation'
+        ]
+
+        return any(indicator in current_url for indicator in sso_indicators)
+
+    def _handle_sso_login(self) -> bool:
+        """
+        Handle SSO login process
+
+        Returns:
+            True if SSO login successful, False otherwise
+        """
+        try:
+            current_url = self.driver.current_url.lower()
+
+            # Microsoft Azure AD SSO
+            if 'login.microsoftonline.com' in current_url:
+                return self._handle_microsoft_sso()
+
+            # Okta SSO
+            elif 'okta.com' in current_url:
+                return self._handle_okta_sso()
+
+            # Generic SSO handling
+            else:
+                return self._handle_generic_sso()
+
+        except Exception as e:
+            logger.error(f"Error handling SSO login: {e}")
+            return False
+
+    def _handle_microsoft_sso(self) -> bool:
+        """
+        Handle Microsoft Azure AD SSO login
+
+        Returns:
+            True if successful, False otherwise
+        """
+        try:
+            logger.info("Handling Microsoft Azure AD SSO login...")
+
+            # Wait for Microsoft login page to load
+            time.sleep(3)
+
+            # Look for email field (sometimes pre-filled)
+            email_xpaths = [
+                "//input[@type='email']",
+                "//input[@name='loginfmt']",
+                "//input[@id='i0116']",
+                "//input[@placeholder='Email, phone, or Skype']"
+            ]
+
+            for xpath in email_xpaths:
+                try:
+                    email_input = WebDriverWait(self.driver, 5).until(
+                        EC.element_to_be_clickable((By.XPATH, xpath))
+                    )
+                    # Clear and re-enter email if needed
+                    if not email_input.get_attribute('value'):
+                        email_input.clear()
+                        email_input.send_keys(self.gmail_email)
+                    break
+                except:
+                    continue
+
+            # Click Next if email step
+            next_xpaths = [
+                "//input[@id='idSIButton9']",
+                "//button[contains(text(), 'Next')]",
+                "//input[@type='submit']"
+            ]
+
+            for xpath in next_xpaths:
+                try:
+                    next_button = WebDriverWait(self.driver, 5).until(
+                        EC.element_to_be_clickable((By.XPATH, xpath))
+                    )
+                    next_button.click()
+                    time.sleep(3)
+                    break
+                except:
+                    continue
+
+            # Handle password input
+            password_xpaths = [
+                "//input[@type='password']",
+                "//input[@name='passwd']",
+                "//input[@id='i0118']",
+                "//input[@placeholder='Password']"
+            ]
+
+            for xpath in password_xpaths:
+                try:
+                    password_input = WebDriverWait(self.driver, 10).until(
+                        EC.element_to_be_clickable((By.XPATH, xpath))
+                    )
+                    password_input.clear()
+                    password_input.send_keys(self.gmail_password)
+                    time.sleep(1)
+                    break
+                except:
+                    continue
+
+            # Click Sign in
+            signin_xpaths = [
+                "//input[@id='idSIButton9']",
+                "//button[contains(text(), 'Sign in')]",
+                "//input[@type='submit']"
+            ]
+
+            for xpath in signin_xpaths:
+                try:
+                    signin_button = WebDriverWait(self.driver, 5).until(
+                        EC.element_to_be_clickable((By.XPATH, xpath))
+                    )
+                    signin_button.click()
+                    time.sleep(5)
+                    break
+                except:
+                    continue
+
+            # Handle "Stay signed in?" prompt
+            try:
+                stay_signed_in_xpaths = [
+                    "//input[@id='idSIButton9']",  # Yes button
+                    "//button[contains(text(), 'Yes')]"
+                ]
+
+                for xpath in stay_signed_in_xpaths:
+                    try:
+                        yes_button = WebDriverWait(self.driver, 5).until(
+                            EC.element_to_be_clickable((By.XPATH, xpath))
+                        )
+                        yes_button.click()
+                        time.sleep(3)
+                        break
+                    except:
+                        continue
+            except:
+                pass
+
+            return True
+
+        except Exception as e:
+            logger.error(f"Error in Microsoft SSO handling: {e}")
+            return False
+
+    def _handle_okta_sso(self) -> bool:
+        """
+        Handle Okta SSO login
+
+        Returns:
+            True if successful, False otherwise
+        """
+        try:
+            logger.info("Handling Okta SSO login...")
+
+            # Wait for Okta login page
+            time.sleep(3)
+
+            # Find username field
+            username_xpaths = [
+                "//input[@id='okta-signin-username']",
+                "//input[@name='username']",
+                "//input[@type='email']",
+                "//input[@placeholder='Username']"
+            ]
+
+            for xpath in username_xpaths:
+                try:
+                    username_input = WebDriverWait(self.driver, 10).until(
+                        EC.element_to_be_clickable((By.XPATH, xpath))
+                    )
+                    username_input.clear()
+                    username_input.send_keys(self.gmail_email)
+                    break
+                except:
+                    continue
+
+            # Find password field
+            password_xpaths = [
+                "//input[@id='okta-signin-password']",
+                "//input[@name='password']",
+                "//input[@type='password']"
+            ]
+
+            for xpath in password_xpaths:
+                try:
+                    password_input = WebDriverWait(self.driver, 5).until(
+                        EC.element_to_be_clickable((By.XPATH, xpath))
+                    )
+                    password_input.clear()
+                    password_input.send_keys(self.gmail_password)
+                    break
+                except:
+                    continue
+
+            # Click Sign In
+            signin_xpaths = [
+                "//input[@id='okta-signin-submit']",
+                "//button[@type='submit']",
+                "//button[contains(text(), 'Sign In')]"
+            ]
+
+            for xpath in signin_xpaths:
+                try:
+                    signin_button = WebDriverWait(self.driver, 5).until(
+                        EC.element_to_be_clickable((By.XPATH, xpath))
+                    )
+                    signin_button.click()
+                    time.sleep(5)
+                    break
+                except:
+                    continue
+
+            return True
+
+        except Exception as e:
+            logger.error(f"Error in Okta SSO handling: {e}")
+            return False
+
+    def _handle_generic_sso(self) -> bool:
+        """
+        Handle generic SSO login (fallback method)
+
+        Returns:
+            True if successful, False otherwise
+        """
+        try:
+            logger.info("Handling generic SSO login...")
+
+            # Wait for SSO page to load
+            time.sleep(3)
+
+            # Generic approach - look for common input fields
+            username_xpaths = [
+                "//input[@type='email']",
+                "//input[@type='text']",
+                "//input[@name='username']",
+                "//input[@name='email']",
+                "//input[contains(@placeholder, 'email')]",
+                "//input[contains(@placeholder, 'username')]"
+            ]
+
+            # Try to find and fill username/email field
+            for xpath in username_xpaths:
+                try:
+                    username_elements = self.driver.find_elements(By.XPATH, xpath)
+                    if username_elements:
+                        username_input = username_elements[0]
+                        if username_input.is_displayed() and username_input.is_enabled():
+                            username_input.clear()
+                            username_input.send_keys(self.gmail_email)
+                            time.sleep(1)
+                            break
+                except:
+                    continue
+
+            # Look for password field
+            password_xpaths = [
+                "//input[@type='password']",
+                "//input[@name='password']",
+                "//input[contains(@placeholder, 'password')]"
+            ]
+
+            for xpath in password_xpaths:
+                try:
+                    password_elements = self.driver.find_elements(By.XPATH, xpath)
+                    if password_elements:
+                        password_input = password_elements[0]
+                        if password_input.is_displayed() and password_input.is_enabled():
+                            password_input.clear()
+                            password_input.send_keys(self.gmail_password)
+                            time.sleep(1)
+                            break
+                except:
+                    continue
+
+            # Look for submit button
+            submit_xpaths = [
+                "//button[@type='submit']",
+                "//input[@type='submit']",
+                "//button[contains(text(), 'Sign in')]",
+                "//button[contains(text(), 'Login')]",
+                "//button[contains(text(), 'Submit')]"
+            ]
+
+            for xpath in submit_xpaths:
+                try:
+                    submit_elements = self.driver.find_elements(By.XPATH, xpath)
+                    if submit_elements:
+                        submit_button = submit_elements[0]
+                        if submit_button.is_displayed() and submit_button.is_enabled():
+                            submit_button.click()
+                            time.sleep(5)
+                            break
+                except:
+                    continue
+
+            logger.warning("Generic SSO handling completed. Manual verification may be required.")
+            return True
+
+        except Exception as e:
+            logger.error(f"Error in generic SSO handling: {e}")
+            return False
+
+    def _handle_regular_password_flow(self) -> bool:
+        """
+        Handle regular Google password authentication (fallback)
+
+        Returns:
+            True if successful, False otherwise
+        """
+        try:
             # Wait for password page and enter password
             password_input = None
             password_xpaths = [
@@ -207,15 +566,40 @@ class GitLabMRDocumentationGenerator:
             password_next_button.click()
             time.sleep(5)
 
+            return True
+
+        except Exception as e:
+            logger.error(f"Error in regular password flow: {e}")
+            return False
+
+    def _handle_post_authentication(self) -> bool:
+        """
+        Handle post-authentication steps (2FA, verification, etc.)
+
+        Returns:
+            True if successful, False otherwise
+        """
+        try:
             # Handle 2FA if required
             try:
                 # Check for 2FA prompts
                 two_fa_elements = self.driver.find_elements(By.XPATH,
-                    "//div[contains(text(), 'verify') or contains(text(), '2-Step') or contains(text(), 'phone')]")
+                                                            "//div[contains(text(), 'verify') or contains(text(), '2-Step') or contains(text(), 'phone') or contains(text(), 'authenticator')]")
 
                 if two_fa_elements:
                     logger.warning("2FA verification required. Please complete it manually.")
                     input("Press Enter after completing 2FA verification...")
+            except:
+                pass
+
+            # Handle any additional verification prompts
+            try:
+                verification_elements = self.driver.find_elements(By.XPATH,
+                                                                  "//div[contains(text(), 'verify') or contains(text(), 'confirm') or contains(text(), 'security')]")
+
+                if verification_elements:
+                    logger.warning("Additional verification may be required. Please complete manually if prompted.")
+                    time.sleep(5)  # Give time for manual intervention
             except:
                 pass
 
@@ -224,8 +608,11 @@ class GitLabMRDocumentationGenerator:
                 WebDriverWait(self.driver, 15).until(
                     EC.any_of(
                         EC.url_contains("myaccount.google.com"),
-                        EC.presence_of_element_located((By.XPATH, "//div[@data-gb-custom-button-id='account_switcher']")),
-                        EC.presence_of_element_located((By.XPATH, "//img[contains(@alt, 'profile')]"))
+                        EC.url_contains("accounts.google.com/ManageAccount"),
+                        EC.presence_of_element_located(
+                            (By.XPATH, "//div[@data-gb-custom-button-id='account_switcher']")),
+                        EC.presence_of_element_located((By.XPATH, "//img[contains(@alt, 'profile')]")),
+                        EC.presence_of_element_located((By.XPATH, "//div[@aria-label='Google Account']"))
                     )
                 )
                 logger.info("Gmail authentication successful!")
@@ -234,10 +621,19 @@ class GitLabMRDocumentationGenerator:
 
             except Exception as e:
                 logger.error(f"Gmail authentication verification failed: {e}")
-                return False
+                logger.warning("Manual verification may be required. Please check the browser.")
+
+                # Ask user to confirm if login appears successful
+                user_input = input("Does the login appear successful in the browser? (y/n): ").lower().strip()
+                if user_input == 'y':
+                    logger.info("User confirmed successful login")
+                    self.authenticated_gmail = True
+                    return True
+                else:
+                    return False
 
         except Exception as e:
-            logger.error(f"Error during automatic Gmail authentication: {e}")
+            logger.error(f"Error in post-authentication handling: {e}")
             return False
 
     def authenticate_gitlab_auto(self) -> bool:
